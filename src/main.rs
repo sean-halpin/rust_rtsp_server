@@ -2,6 +2,7 @@ use std::io::{Read, Write};
 use std::net::{Shutdown, TcpListener, TcpStream};
 use std::str;
 use std::thread;
+mod rtsp_req_parse;
 
 fn handle_client(mut stream: TcpStream) {
     let mut data: Vec<u8> = [1u8; 1000].to_vec(); // using 50 byte buffer
@@ -13,6 +14,7 @@ fn handle_client(mut stream: TcpStream) {
                 "OK!, read {} bytes \n***********\n{}\n***********",
                 size, as_string
             );
+            rtsp_req_parse::parse(&as_string);
             stream.write_all(&data).unwrap();
         }
         Err(_) => {
