@@ -1,30 +1,50 @@
-use std::io::{BufRead, BufReader, BufWriter, Write};
-use std::net::{TcpListener, TcpStream};
+use std::io::{Read, Write};
+use std::net::{Shutdown, TcpListener, TcpStream};
+use std::str;
 use std::thread;
 
-fn main() {
-    let listener = TcpListener::bind("127.0.0.1:554").unwrap();
+fn handle_client(mut stream: TcpStream) {
+    let mut data: Vec<u8> = [1u8; 1000].to_vec(); // using 50 byte buffer
+    match stream.read(&mut data) {
+        Ok(size) => {
+            // echo everything!
+            let as_string = str::from_utf8(&data).unwrap();
+            println!(
+                "OK!, read {} bytes \n***********\n{}\n***********",
+                size, as_string
+            );
+            stream.write_all(&data).unwrap();
+        }
+        Err(_) => {
+            println!(
+                "An error occurred, terminating connection with {}",
+                stream.peer_addr().unwrap()
+            );
+            stream.shutdown(Shutdown::Both).unwrap();
+        }
+    }
+    println!("Client Handling Complete!");
+}
 
+fn main() {
+    let listener = TcpListener::bind("0.0.0.0:554").unwrap();
+    // accept connections and process them, spawning a new thread for each one
+    println!("Server listening on port 554");
     for stream in listener.incoming() {
         match stream {
             Ok(stream) => {
-                println!("Client connected");
-
-                let mut writer = BufWriter::new(&stream);
-                writer
-                    .write_all("RTSP/1.0 200 OK\r\n".as_bytes())
-                    .expect("could not write");
-                writer.flush().expect("could not flush");
-
-                let mut reader = BufReader::new(&stream);
-                let mut response = String::new();
-                reader.read_line(&mut response).expect("could not read");
-                println!("Server received {}", response);
+                println!("New connection: {}", stream.peer_addr().unwrap());
+                thread::spawn(move || {
+                    // connection succeeded
+                    handle_client(stream)
+                });
             }
             Err(e) => {
+                println!("Error: {}", e);
                 /* connection failed */
-                println!("connection failed!");
             }
         }
     }
+    // close the socket server
+    drop(listener);
 }
