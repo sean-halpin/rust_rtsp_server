@@ -1,10 +1,10 @@
-use crate::rtsp_req_parse::RawMessage;
+use crate::rtsp_msg_parse::RawMessage;
 use std::io::{BufRead, BufReader, BufWriter, Write};
 use std::net::{TcpListener, TcpStream};
 use std::str;
 use std::thread;
-mod rtsp_req_parse;
-use rtsp_req_parse::RtspRequest;
+mod rtsp_msg_parse;
+use rtsp_msg_parse::RtspRequest;
 
 fn handle_client(stream: TcpStream) {
     println!("Client connected");
@@ -15,23 +15,30 @@ fn handle_client(stream: TcpStream) {
         match reader.read_line(&mut data) {
             Ok(size) => {
                 println!("{}", size);
-                if size <= 2 {
+                if size <= 0 {
                     break;
                 }
-                let _string = str::from_utf8(&data.as_bytes()).unwrap();
-                println!("{}", _string);
+                if data.contains("\r\n\r\n") {
+                    let _string = str::from_utf8(&data.as_bytes()).unwrap();
+                    println!("{}", _string);
+                    let _parsed_req = RtspRequest::parse_as_rtsp(data.to_owned());
+                    let _response = _parsed_req.unwrap().response().unwrap();
+                    println!("Response {:?}", _response);
+                    let mut writer = BufWriter::new(&stream);
+                    writer
+                        .write_all(_response.as_bytes())
+                        .expect("could not write");
+                    data.clear();
+                }
             }
-            Err(_) => {
-                println!("Error");
+            Err(e) => {
+                println!("Error: {:?}", e);
                 break;
             }
         }
     }
-    let _parsed_req = RtspRequest::parse_as_rtsp(data);
 
-    let mut writer = BufWriter::new(&stream);
-    writer.write_all("\n".as_bytes()).expect("could not write");
-    writer.flush().expect("could not flush");
+    println!("Client handled");
 }
 
 fn main() {
