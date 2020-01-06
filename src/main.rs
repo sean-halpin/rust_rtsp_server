@@ -1,31 +1,37 @@
-use std::io::{Read, Write};
-use std::net::{Shutdown, TcpListener, TcpStream};
+use crate::rtsp_req_parse::RawMessage;
+use std::io::{BufRead, BufReader, BufWriter, Write};
+use std::net::{TcpListener, TcpStream};
 use std::str;
 use std::thread;
 mod rtsp_req_parse;
+use rtsp_req_parse::RtspRequest;
 
-fn handle_client(mut stream: TcpStream) {
-    let mut data: Vec<u8> = [1u8; 1000].to_vec(); // using 50 byte buffer
-    match stream.read(&mut data) {
-        Ok(size) => {
-            // echo everything!
-            let as_string = str::from_utf8(&data).unwrap();
-            println!(
-                "OK!, read {} bytes \n***********\n{}\n***********",
-                size, as_string
-            );
-            rtsp_req_parse::parse(&as_string);
-            stream.write_all(&data).unwrap();
-        }
-        Err(_) => {
-            println!(
-                "An error occurred, terminating connection with {}",
-                stream.peer_addr().unwrap()
-            );
-            stream.shutdown(Shutdown::Both).unwrap();
+fn handle_client(stream: TcpStream) {
+    println!("Client connected");
+
+    let mut reader = BufReader::new(&stream);
+    let mut data = String::new();
+    loop {
+        match reader.read_line(&mut data) {
+            Ok(size) => {
+                println!("{}", size);
+                if size <= 2 {
+                    break;
+                }
+                let _string = str::from_utf8(&data.as_bytes()).unwrap();
+                println!("{}", _string);
+            }
+            Err(_) => {
+                println!("Error");
+                break;
+            }
         }
     }
-    println!("Client Handling Complete!");
+    let _parsed_req = RtspRequest::parse_as_rtsp(data);
+
+    let mut writer = BufWriter::new(&stream);
+    writer.write_all("\n".as_bytes()).expect("could not write");
+    writer.flush().expect("could not flush");
 }
 
 fn main() {
