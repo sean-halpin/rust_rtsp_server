@@ -85,6 +85,7 @@ impl RawMessage for RtspRequest {
                 _response_lines.push(_server_id);
                 _response_lines.push("Session: ".to_owned() + &session_id.to_string());
                 _response_lines.push(rtsp_date_time());
+                _response_lines.push("\r\n".to_owned());
             }
 
             Some(RtspCommand::Teardown) => (),
