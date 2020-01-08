@@ -9,7 +9,7 @@ pub enum RtspCommand {
     Teardown,
 }
 
-pub trait RawMessage {
+pub trait RtspParsable {
     fn parse_as_rtsp(raw: String) -> Option<Self>
     where
         Self: std::marker::Sized;
@@ -17,18 +17,18 @@ pub trait RawMessage {
 }
 
 pub struct RtspRequest {
-    command: Option<RtspCommand>,
-    content_base: Option<String>,
-    cseq: Option<i32>,
-    session: Option<String>,
-    transport: Option<String>,
+    pub command: Option<RtspCommand>,
+    pub content_base: Option<String>,
+    pub cseq: Option<i32>,
+    pub session: Option<String>,
+    pub transport: Option<(String, String)>,
 }
 
 fn rtsp_date_time() -> String {
     return "Date: ".to_owned() + &Utc::now().to_rfc2822();
 }
 
-impl RawMessage for RtspRequest {
+impl RtspParsable for RtspRequest {
     fn response(&self) -> Option<String> {
         let _header_ok = "RTSP/1.0 200 OK".to_owned();
         let _server_id = "Server: Rust RTSP server".to_owned();
@@ -111,7 +111,7 @@ impl RawMessage for RtspRequest {
         };
 
         let mut _cseq: i32 = 0;
-        let mut transport = String::new();
+        let mut transport: Vec<&str> = vec!["unset", "unset"];
         let mut session = String::new();
         for line in lines {
             let key_val: Vec<&str> = line.split(": ").collect();
@@ -119,7 +119,16 @@ impl RawMessage for RtspRequest {
                 "CSeq" => {
                     _cseq = key_val[1].parse::<i32>().unwrap();
                 }
-                "Transport" => transport = key_val[1].to_owned(),
+                "Transport" => {
+                    let _transport = key_val[1].to_owned();
+                    let _transport_split: Vec<&str> = key_val[1].split(";").collect();
+                    for _item in _transport_split {
+                        if _item.contains("client_port") {
+                            let _key_val: Vec<&str> = _item.split("=").collect();
+                            transport = _key_val[1].split("-").collect();
+                        }
+                    }
+                }
                 "Session" => session = key_val[1].to_owned(),
                 _ => (),
             };
@@ -130,7 +139,7 @@ impl RawMessage for RtspRequest {
             content_base: Some(header[1].to_owned()),
             cseq: Some(_cseq),
             session: Some(session),
-            transport: Some(transport),
+            transport: Some((transport[0].to_string(), transport[1].to_string())),
         });
     }
 }
