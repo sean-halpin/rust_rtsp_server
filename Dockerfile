@@ -46,3 +46,10 @@ RUN set -eux; \
     rustup --version; \
     cargo --version; \
     rustc --version;
+
+WORKDIR /usr/src/app
+COPY . .
+
+RUN cargo install --path .
+
+CMD ["rust-rtsp-server"]
