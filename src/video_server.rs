@@ -41,8 +41,8 @@ pub fn serve_rtp(
                video_pattern,
                remote_host,
                client_rtp_port,
-               client_rtcp_port,
                remote_host, 
+               client_rtcp_port,
                server_rtcp_port);
 
     let pipeline = gstreamer::parse_launch(&_pipeline_string).unwrap();

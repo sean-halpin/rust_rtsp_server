@@ -65,8 +65,9 @@ impl RtspParsable for RtspRequest {
                 _response_lines.push(_header_ok);
                 _response_lines.push("CSeq: ".to_owned() + &(self.cseq.unwrap()).to_string());
                 _response_lines.push(
-                    "Transport: RTP/AVP;unicast;client_port=10500-10501;server_port=5700-5701;mode=\"PLAY\""
-                        .to_owned(),
+                    format!("Transport: RTP/AVP;unicast;client_port={}-{};server_port=5700-5701;mode=\"PLAY\"",
+                    &self.transport.as_ref().unwrap().0,
+                    &self.transport.as_ref().unwrap().1),
                 );
                 _response_lines.push(_server_id);
                 _response_lines.push("Session: ".to_owned() + &session_id.to_string());
@@ -75,11 +76,12 @@ impl RtspParsable for RtspRequest {
             }
             Some(RtspCommand::Play) => {
                 let session_id = 1;
+                _response_lines.push(_header_ok);
                 _response_lines.push("CSeq: ".to_owned() + &(self.cseq.unwrap()).to_string());
                 _response_lines.push(
-                    "RTP-Info: url=: ".to_owned()
+                    "RTP-Info: url=:".to_owned()
                         + &self.content_base.as_ref().unwrap().to_string()
-                        + "stream=0;seq=1;rtptime=0",
+                        + "/stream=0;seq=1;rtptime=0",
                 );
                 _response_lines.push("Range: npt=0-".to_owned());
                 _response_lines.push(_server_id);
@@ -126,6 +128,7 @@ impl RtspParsable for RtspRequest {
                         if _item.contains("client_port") {
                             let _key_val: Vec<&str> = _item.split("=").collect();
                             transport = _key_val[1].split("-").collect();
+                            println!("Client Ports {}, {}", transport[0], transport[1]);
                         }
                     }
                 }

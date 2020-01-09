@@ -11,6 +11,9 @@ fn handle_client(stream: TcpStream) {
 
     let mut reader = BufReader::new(&stream);
     let mut data = String::new();
+    let mut session_rtp1 = String::new();
+    let mut session_rtp2 = String::new();
+
     loop {
         match reader.read_line(&mut data) {
             Ok(size) => {
@@ -22,6 +25,11 @@ fn handle_client(stream: TcpStream) {
                     let _string = str::from_utf8(&data.as_bytes()).unwrap();
                     println!("{}", _string);
                     let _parsed_req = RtspRequest::parse_as_rtsp(data.to_owned());
+                    if _parsed_req.as_ref().unwrap().transport.as_ref().unwrap().0.to_owned() != "unset"
+                    {
+                        session_rtp1 = _parsed_req.as_ref().unwrap().transport.as_ref().unwrap().0.to_owned();
+                        session_rtp2 = _parsed_req.as_ref().unwrap().transport.as_ref().unwrap().1.to_owned();
+                    }
                     let _response = _parsed_req.as_ref().unwrap().response().unwrap();
                     println!("Response {:?}", _response);
                     let mut writer = BufWriter::new(&stream);
@@ -32,23 +40,9 @@ fn handle_client(stream: TcpStream) {
                         Some(RtspCommand::Play) => {
                             video_server::serve_rtp(
                                 "127.0.0.1".to_string(),
-                                _parsed_req
-                                    .as_ref()
-                                    .unwrap()
-                                    .transport
-                                    .as_ref()
-                                    .unwrap()
-                                    .0
-                                    .to_owned(),
-                                _parsed_req
-                                    .as_ref()
-                                    .unwrap()
-                                    .transport
-                                    .as_ref()
-                                    .unwrap()
-                                    .1
-                                    .to_owned(),
-                                "5002".to_string(),
+                                session_rtp1.to_owned(),
+                                session_rtp2.to_owned(),
+                                "5700".to_string(),
                             );
                         }
                         Some(_) => (),
