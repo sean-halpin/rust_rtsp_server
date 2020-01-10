@@ -19,9 +19,10 @@ pub trait RtspParsable {
 pub struct RtspRequest {
     pub command: Option<RtspCommand>,
     pub content_base: Option<String>,
-    pub cseq: Option<i32>,
+    pub cseq: Option<String>,
     pub session: Option<String>,
-    pub transport: Option<(String, String)>,
+    pub client_rtp: Option<String>,
+    pub client_rtcp: Option<String>,
 }
 
 fn rtsp_date_time() -> String {
@@ -39,7 +40,8 @@ impl RtspParsable for RtspRequest {
                 let _server_functions =
                     "Public: OPTIONS, DESCRIBE, PLAY, SETUP, TEARDOWN".to_owned();
                 _response_lines.push(_header_ok);
-                _response_lines.push("CSeq: ".to_owned() + &(self.cseq.unwrap()).to_string());
+                _response_lines
+                    .push("CSeq: ".to_owned() + &(self.cseq.as_ref().unwrap()).to_string());
                 _response_lines.push(_server_functions);
                 _response_lines.push(_server_id);
                 _response_lines.push(rtsp_date_time());
@@ -49,7 +51,8 @@ impl RtspParsable for RtspRequest {
                 let _sdp = "v=0\r\ns=Rust RTSP server\r\nt=0 0\r\nm=video 0 RTP/AVP 96\r\na=rtpmap:96 H264/90000".to_owned();
                 let _sdp_byte_count: i32 = _sdp.len() as i32;
                 _response_lines.push(_header_ok);
-                _response_lines.push("CSeq: ".to_owned() + &(self.cseq.unwrap()).to_string());
+                _response_lines
+                    .push("CSeq: ".to_owned() + &(self.cseq.as_ref().unwrap()).to_string());
                 _response_lines.push("Content-Type: ".to_owned() + "application/sdp");
                 _response_lines.push(
                     "Content-Base: ".to_owned() + &self.content_base.as_ref().unwrap().to_string(),
@@ -63,11 +66,12 @@ impl RtspParsable for RtspRequest {
             Some(RtspCommand::Setup) => {
                 let session_id = 1;
                 _response_lines.push(_header_ok);
-                _response_lines.push("CSeq: ".to_owned() + &(self.cseq.unwrap()).to_string());
+                _response_lines
+                    .push("CSeq: ".to_owned() + &(self.cseq.as_ref().unwrap()).to_string());
                 _response_lines.push(
                     format!("Transport: RTP/AVP;unicast;client_port={}-{};server_port=5700-5701;mode=\"PLAY\"",
-                    &self.transport.as_ref().unwrap().0,
-                    &self.transport.as_ref().unwrap().1),
+                    &self.client_rtp.as_ref().unwrap(),
+                    &self.client_rtcp.as_ref().unwrap()),
                 );
                 _response_lines.push(_server_id);
                 _response_lines.push("Session: ".to_owned() + &session_id.to_string());
@@ -77,7 +81,8 @@ impl RtspParsable for RtspRequest {
             Some(RtspCommand::Play) => {
                 let session_id = 1;
                 _response_lines.push(_header_ok);
-                _response_lines.push("CSeq: ".to_owned() + &(self.cseq.unwrap()).to_string());
+                _response_lines
+                    .push("CSeq: ".to_owned() + &(self.cseq.as_ref().unwrap()).to_string());
                 _response_lines.push(
                     "RTP-Info: url=:".to_owned()
                         + &self.content_base.as_ref().unwrap().to_string()
@@ -91,7 +96,7 @@ impl RtspParsable for RtspRequest {
             }
 
             Some(RtspCommand::Teardown) => (),
-            _ => (),
+            _ => return None,
         };
         return Some(_response_lines.join("\r\n"));
     }
@@ -112,14 +117,21 @@ impl RtspParsable for RtspRequest {
             }
         };
 
-        let mut _cseq: i32 = 0;
-        let mut transport: Vec<&str> = vec!["unset", "unset"];
-        let mut session = String::new();
+        let _content_base = if header[1].contains("rtsp://") {
+            Some(header[1].to_owned())
+        } else {
+            None
+        };
+
+        let mut _cseq: Option<String> = None;
+        let mut _rtp: Option<String> = None;
+        let mut _rtcp: Option<String> = None;
+        let mut _session: Option<String> = None;
         for line in lines {
             let key_val: Vec<&str> = line.split(": ").collect();
             match key_val[0] {
                 "CSeq" => {
-                    _cseq = key_val[1].parse::<i32>().unwrap();
+                    _cseq = Some(key_val[1].to_owned());
                 }
                 "Transport" => {
                     let _transport = key_val[1].to_owned();
@@ -127,22 +139,24 @@ impl RtspParsable for RtspRequest {
                     for _item in _transport_split {
                         if _item.contains("client_port") {
                             let _key_val: Vec<&str> = _item.split("=").collect();
-                            transport = _key_val[1].split("-").collect();
-                            println!("Client Ports {}, {}", transport[0], transport[1]);
+                            let transport: Vec<&str> = _key_val[1].split("-").collect();
+                            _rtp = Some(transport[0].to_owned());
+                            _rtcp = Some(transport[1].to_owned());
                         }
                     }
                 }
-                "Session" => session = key_val[1].to_owned(),
+                "Session" => _session = Some(key_val[1].to_owned()),
                 _ => (),
             };
         }
 
         return Some(RtspRequest {
             command: _cmd,
-            content_base: Some(header[1].to_owned()),
-            cseq: Some(_cseq),
-            session: Some(session),
-            transport: Some((transport[0].to_string(), transport[1].to_string())),
+            content_base: _content_base,
+            cseq: _cseq,
+            session: _session,
+            client_rtp: _rtp,
+            client_rtcp: _rtcp,
         });
     }
 }
