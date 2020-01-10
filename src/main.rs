@@ -24,8 +24,8 @@ fn handle_client(stream: TcpStream) {
                 if data.contains("\r\n\r\n") {
                     let _string = str::from_utf8(&data.as_bytes()).unwrap();
                     println!("{}", _string);
-                    let _parsed_req = RtspRequest::parse_as_rtsp(data.to_owned());
-                    match _parsed_req.as_ref() {
+
+                    match RtspRequest::parse_as_rtsp(data.to_owned()) {
                         Some(req) => {
                             client_rtp_port = req.client_rtp.to_owned();
                             client_rtcp_port = req.client_rtcp.to_owned();
