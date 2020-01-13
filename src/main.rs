@@ -11,27 +11,30 @@ fn handle_client(stream: TcpStream) {
 
     let mut reader = BufReader::new(&stream);
     let mut data = String::new();
-    let mut client_rtp_port: Option<String> = None;
-    let mut client_rtcp_port: Option<String> = None;
+    let mut client_rtp_port: String = String::new();
+    let mut client_rtcp_port: String = String::new();
 
     loop {
         match reader.read_line(&mut data) {
             Ok(size) => {
-                println!("{}", size);
                 if size <= 0 {
                     break;
                 }
                 if data.contains("\r\n\r\n") {
                     let _string = str::from_utf8(&data.as_bytes()).unwrap();
-                    println!("{}", _string);
+                    println!("Request {:?}", _string);
 
                     match RtspRequest::parse_as_rtsp(data.to_owned()) {
                         Some(req) => {
-                            client_rtp_port = req.client_rtp.to_owned();
-                            client_rtcp_port = req.client_rtcp.to_owned();
+                            if let Some(port) = &req.client_rtp {
+                                client_rtp_port = port.to_string();
+                            }
+                            if let Some(port) = &req.client_rtcp {
+                                client_rtcp_port = port.to_string();
+                            }
                             match req.response() {
                                 Some(resp) => {
-                                    println!("Response {:?}", resp);
+                                    println!("Response {:?}\n", resp);
                                     let mut writer = BufWriter::new(&stream);
                                     writer
                                         .write_all(resp.as_bytes())
@@ -41,11 +44,13 @@ fn handle_client(stream: TcpStream) {
                             }
                             match req.command {
                                 Some(RtspCommand::Play) => {
+                                    let a = client_rtp_port.clone();
+                                    let b = client_rtcp_port.clone();
                                     thread::spawn(move || {
                                         video_server::serve_rtp(
                                             "127.0.0.1".to_string(),
-                                            client_rtp_port.unwrap_or("".to_string()).to_owned(),
-                                            client_rtcp_port.unwrap_or("".to_string()).to_owned(),
+                                            a.to_string(),
+                                            b.to_string(),
                                             "5700".to_string(),
                                         );
                                     });

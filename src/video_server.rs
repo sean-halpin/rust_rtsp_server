@@ -32,7 +32,7 @@ pub fn serve_rtp(
     server_rtcp_port: String,
 ) {
     gstreamer::init().unwrap();
-    let video_pattern = "ball";
+    let video_pattern = "smpte";
     let _pipeline_string = format!("rtpbin name=rtpman autoremove=true 
                videotestsrc pattern={} ! videoconvert ! x264enc ! rtph264pay ! rtpman.send_rtp_sink_0 
                rtpman.send_rtp_src_0 ! udpsink name=rtpudpsink host={} port={} 
