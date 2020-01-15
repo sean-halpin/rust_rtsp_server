@@ -1,9 +1,9 @@
+mod rtsp_msg_handler;
+use rtsp_msg_handler::{RtspCommand, RtspMessage, RtspParsable, RtspResponse};
 use std::io::{BufRead, BufReader, BufWriter, Write};
 use std::net::{TcpListener, TcpStream};
 use std::str;
 use std::thread;
-mod rtsp_msg_handler;
-use rtsp_msg_handler::{RtspCommand, RtspParsable, RtspRequest};
 mod video_server;
 
 fn handle_client(stream: TcpStream) {
@@ -24,7 +24,7 @@ fn handle_client(stream: TcpStream) {
                     let _string = str::from_utf8(&data.as_bytes()).unwrap();
                     println!("Request {:?}", _string);
 
-                    match RtspRequest::parse_as_rtsp(data.to_owned()) {
+                    match RtspMessage::parse_as_rtsp(data.to_owned()) {
                         Some(req) => {
                             if let Some(port) = &req.client_rtp {
                                 client_rtp_port = port.to_string();

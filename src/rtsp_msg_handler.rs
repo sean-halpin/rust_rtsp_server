@@ -13,10 +13,13 @@ pub trait RtspParsable {
     fn parse_as_rtsp(raw: String) -> Option<Self>
     where
         Self: std::marker::Sized;
+}
+
+pub trait RtspResponse {
     fn response(&self) -> Option<String>;
 }
 
-pub struct RtspRequest {
+pub struct RtspMessage {
     pub command: Option<RtspCommand>,
     pub content_base: Option<String>,
     pub cseq: Option<String>,
@@ -29,7 +32,7 @@ fn rtsp_date_time() -> String {
     return "Date: ".to_owned() + &Utc::now().to_rfc2822();
 }
 
-impl RtspParsable for RtspRequest {
+impl RtspResponse for RtspMessage {
     fn response(&self) -> Option<String> {
         let _header_ok = "RTSP/1.0 200 OK".to_owned();
         let _server_id = "Server: Rust RTSP server".to_owned();
@@ -94,14 +97,16 @@ impl RtspParsable for RtspRequest {
                 _response_lines.push(rtsp_date_time());
                 _response_lines.push("\r\n".to_owned());
             }
-
+            
             Some(RtspCommand::Teardown) => (),
             _ => return None,
         };
         return Some(_response_lines.join("\r\n"));
     }
+}
 
-    fn parse_as_rtsp(_raw: String) -> Option<RtspRequest> {
+impl RtspParsable for RtspMessage {
+    fn parse_as_rtsp(_raw: String) -> Option<RtspMessage> {
         let raw_split = _raw.split("\r\n");
         let lines: Vec<&str> = raw_split.collect();
         let header: Vec<&str> = lines[0].split(" ").collect();
@@ -150,7 +155,7 @@ impl RtspParsable for RtspRequest {
             };
         }
 
-        return Some(RtspRequest {
+        return Some(RtspMessage {
             command: _cmd,
             content_base: _content_base,
             cseq: _cseq,
