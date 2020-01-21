@@ -36,7 +36,7 @@ pub fn serve_rtp(
     let _pipeline_string = format!("rtpbin name=rtpman autoremove=true 
                videotestsrc pattern={} ! videoconvert ! x264enc ! rtph264pay ! rtpman.send_rtp_sink_0 
                rtpman.send_rtp_src_0 ! udpsink name=rtpudpsink host={} port={} 
-               rtpman.send_rtcp_src_0 ! udpsink name=rtcpudpsink  host={} port={} sync=false async=false 
+               rtpman.send_rtcp_src_0 ! udpsink name=rtcpudpsink host={} port={} sync=false async=false 
                udpsrc name=rtcpudpsrc port={} ! rtpman.recv_rtcp_sink_0", 
                video_pattern,
                remote_host,
