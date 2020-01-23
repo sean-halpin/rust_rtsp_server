@@ -33,39 +33,42 @@ fn handle_client(stream: TcpStream) {
                                     let mut writer = BufWriter::new(&stream);
                                     match writer.write_all(resp.as_bytes()) {
                                         Ok(_) => (),
-                                        Err(e) => (eprintln!("Error writing bytes: {}", e)),
+                                        Err(e) => (println!("Error writing bytes: {}", e)),
                                     }
                                 }
                                 None => {
-                                    eprintln!("No response found!");
+                                    println!("No response found!");
                                     break;
                                 }
                             }
                             match req.command {
                                 Some(RtspCommand::Setup) => {
-                                    session = Some(RtspSession::record(
-                                        req.client_rtp.unwrap(),
-                                        req.client_rtcp.unwrap(),
-                                    ));
+                                    session = Some(RtspSession::record_client_ports(req.clone()));
                                 }
-                                Some(RtspCommand::Play) => {
-                                    let serve = video_server::serve_rtp(
-                                        client_ip.to_owned(),
-                                        session.as_ref().unwrap().client_rtp.as_ref().unwrap().to_owned(),
-                                        session.as_ref().unwrap().client_rtcp.as_ref().unwrap().to_owned(),
-                                        "5700".to_string(),
-                                    );
-                                    thread::spawn(move || serve);
-                                }
+                                Some(RtspCommand::Play) => match &session {
+                                    Some(sess) => {
+                                        let serve = video_server::serve_rtp(
+                                            client_ip.to_owned(),
+                                            sess.clone().client_rtp,
+                                            sess.clone().client_rtcp,
+                                            sess.clone().server_rtcp,
+                                        );
+                                        thread::spawn(move || serve);
+                                    }
+                                    None => {
+                                        println!("No Session Found!");
+                                        break;
+                                    }
+                                },
                                 Some(_) => (),
                                 None => {
-                                    eprintln!("Could not determine the Rtsp Command!");
+                                    println!("Could not determine the Rtsp Command!");
                                     break;
                                 }
                             }
                         }
                         None => {
-                            eprintln!("Could not parse RtspMessage!");
+                            println!("Could not parse RtspMessage!");
                             break;
                         }
                     }
