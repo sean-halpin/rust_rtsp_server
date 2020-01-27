@@ -1,7 +1,7 @@
 extern crate chrono;
 use chrono::Utc;
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub enum RtspCommand {
     Options,
     Describe,
@@ -20,7 +20,7 @@ pub trait RtspResponse {
     fn response(&self) -> Option<String>;
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct RtspMessage {
     pub command: Option<RtspCommand>,
     pub content_base: Option<String>,

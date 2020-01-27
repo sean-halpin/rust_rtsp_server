@@ -45,15 +45,20 @@ fn handle_client(stream: TcpStream) {
                                 Some(RtspCommand::Setup) => {
                                     session = Some(RtspSession::record_client_ports(req.clone()));
                                 }
-                                Some(RtspCommand::Play) => match &session {
-                                    Some(sess) => {
-                                        let serve = video_server::serve_rtp(
-                                            client_ip.to_owned(),
-                                            sess.clone().client_rtp,
-                                            sess.clone().client_rtcp,
-                                            sess.clone().server_rtcp,
-                                        );
-                                        thread::spawn(move || serve);
+                                Some(RtspCommand::Play) => match session.clone() {
+                                    Some(_sess) => {
+                                        let serve = |sess: RtspSession, client_ip: String| {
+                                            video_server::serve_rtp(
+                                                client_ip.clone(),
+                                                sess.clone().client_rtp,
+                                                sess.clone().client_rtcp,
+                                                sess.clone().server_rtcp,
+                                            )
+                                        };
+                                        let c_ip = client_ip.clone();
+                                        thread::spawn(move || serve(_sess, c_ip));
+                                        println!("Playing!");
+                                        break;
                                     }
                                     None => {
                                         println!("No Session Found!");
