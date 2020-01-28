@@ -58,7 +58,6 @@ fn handle_client(stream: TcpStream) {
                                         let c_ip = client_ip.clone();
                                         thread::spawn(move || serve(_sess, c_ip));
                                         println!("Playing!");
-                                        break;
                                     }
                                     None => {
                                         println!("No Session Found!");

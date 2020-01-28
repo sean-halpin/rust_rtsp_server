@@ -6,11 +6,13 @@ use futures::prelude::*;
 
 async fn message_loop(bus: gstreamer::Bus) {
     let mut messages = gstreamer::BusStream::new(&bus);
-
     while let Some(msg) = messages.next().await {
         use gstreamer::MessageView;
         match msg.view() {
-            MessageView::Eos(..) => break,
+            MessageView::Eos(..) => {
+                println!("Eos!");
+                break;
+            },
             MessageView::Error(err) => {
                 println!(
                     "Error from {:?}: {} ({:?})",
@@ -19,8 +21,9 @@ async fn message_loop(bus: gstreamer::Bus) {
                     err.get_debug()
                 );
                 break;
-            }
-            _ => (),
+            },
+            MessageView::StreamStatus(_) => (),
+            _ => ()
         };
     }
 }
