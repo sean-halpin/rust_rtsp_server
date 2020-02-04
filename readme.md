@@ -14,13 +14,14 @@ Build
 docker build -t rust_rtsp .
 ```
 
-Run
+Run built image
 ```
 docker run --rm -d --network host rust_rtsp                                         
 ``` 
 
 Build & run in Docker while developing on local host
 ```
+docker build -t rust_rtsp .
 docker run -it --rm -d -v $(pwd):/src --network host rust_rtsp /bin/bash
 cd /src
 cargo build
