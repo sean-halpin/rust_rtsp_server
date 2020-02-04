@@ -19,12 +19,10 @@ Run
 docker run --rm -d --network host rust_rtsp                                         
 ``` 
 
-Build in Docker
+Build & run in Docker while developing on local host
 ```
 docker run -it --rm -d -v $(pwd):/src --network host rust_rtsp /bin/bash
-```
-Then
-```
 cd /src
 cargo build
+RUST_BACKTRACE=1 ./target/debug/rust-rtsp-server
 ```
