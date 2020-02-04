@@ -1,4 +1,5 @@
 extern crate chrono;
+use crate::rtsp_session::RtspSession;
 use chrono::Utc;
 
 #[derive(Clone, Debug)]
@@ -17,7 +18,7 @@ pub trait RtspParsable {
 }
 
 pub trait RtspResponse {
-    fn response(&self) -> Option<String>;
+    fn response(&self, session: Option<RtspSession>) -> Option<String>;
 }
 
 #[derive(Clone, Debug)]
@@ -25,7 +26,7 @@ pub struct RtspMessage {
     pub command: Option<RtspCommand>,
     pub content_base: Option<String>,
     pub cseq: Option<String>,
-    pub session: Option<String>,
+    pub session_id: Option<String>,
     pub client_rtp: Option<String>,
     pub client_rtcp: Option<String>,
 }
@@ -35,7 +36,7 @@ fn rtsp_date_time() -> String {
 }
 
 impl RtspResponse for RtspMessage {
-    fn response(&self) -> Option<String> {
+    fn response(&self, session: Option<RtspSession>) -> Option<String> {
         let _header_ok = "RTSP/1.0 200 OK".to_owned();
         let _server_id = "Server: Rust RTSP server".to_owned();
         let mut _response_lines: Vec<String> = Vec::new();
@@ -73,11 +74,14 @@ impl RtspResponse for RtspMessage {
                 _response_lines.push(_header_ok);
                 _response_lines
                     .push("CSeq: ".to_owned() + &(self.cseq.as_ref().unwrap()).to_string());
-                _response_lines.push(
-                    format!("Transport: RTP/AVP;unicast;client_port={}-{};server_port=5700-5701;mode=\"PLAY\"",
+                let rtcp_port: i32 = session.unwrap().server_rtcp.clone().parse().unwrap();
+                _response_lines.push(format!(
+                    "Transport: RTP/AVP;unicast;client_port={}-{};server_port={}-{};mode=\"PLAY\"",
                     &self.client_rtp.as_ref().unwrap(),
-                    &self.client_rtcp.as_ref().unwrap()),
-                );
+                    &self.client_rtcp.as_ref().unwrap(),
+                    rtcp_port,
+                    rtcp_port + 1
+                ));
                 _response_lines.push(_server_id);
                 _response_lines.push("Session: ".to_owned() + &session_id.to_string());
                 _response_lines.push(rtsp_date_time());
@@ -160,7 +164,7 @@ impl RtspParsable for RtspMessage {
             command: _cmd,
             content_base: _content_base,
             cseq: _cseq,
-            session: _session,
+            session_id: _session,
             client_rtp: _rtp,
             client_rtcp: _rtcp,
         });

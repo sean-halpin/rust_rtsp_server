@@ -8,6 +8,22 @@ use std::net::{TcpListener, TcpStream};
 use std::str;
 use std::thread;
 
+fn respond_to_client(req: RtspMessage, stream: &TcpStream, session: Option<RtspSession>) {
+    match req.response(session) {
+        Some(resp) => {
+            println!("Response {:?}\n", resp);
+            let mut writer = BufWriter::new(stream);
+            match writer.write_all(resp.as_bytes()) {
+                Ok(_) => (),
+                Err(e) => (println!("Error writing bytes: {}", e)),
+            }
+        }
+        None => {
+            println!("No response found!");
+        }
+    }
+}
+
 fn handle_client(stream: TcpStream) {
     let client_ip = stream.peer_addr().unwrap().ip().to_string();
     println!("Client connected: {}", client_ip.to_owned());
@@ -26,51 +42,39 @@ fn handle_client(stream: TcpStream) {
                     println!("Request {:?}", _string);
 
                     match RtspMessage::parse_as_rtsp(tcp_msg_buf.to_owned()) {
-                        Some(req) => {
-                            match req.response() {
-                                Some(resp) => {
-                                    println!("Response {:?}\n", resp);
-                                    let mut writer = BufWriter::new(&stream);
-                                    match writer.write_all(resp.as_bytes()) {
-                                        Ok(_) => (),
-                                        Err(e) => (println!("Error writing bytes: {}", e)),
-                                    }
+                        Some(req) => match req.command {
+                            Some(RtspCommand::Setup) => {
+                                session = Some(RtspSession::setup(req.clone()));
+                                respond_to_client(req.clone(), &stream, session.clone());
+                            }
+                            Some(RtspCommand::Play) => match session.clone() {
+                                Some(_sess) => {
+                                    let serve = |sess: RtspSession, client_ip: String| {
+                                        video_server::serve_rtp(
+                                            client_ip.clone(),
+                                            sess.clone().client_rtp,
+                                            sess.clone().client_rtcp,
+                                            sess.clone().server_rtcp,
+                                        )
+                                    };
+                                    let c_ip = client_ip.clone();
+                                    thread::spawn(move || serve(_sess, c_ip));
+                                    respond_to_client(req.clone(), &stream, session.clone());
+                                    println!("Playing!");
                                 }
                                 None => {
-                                    println!("No response found!");
+                                    println!("No Session Found!");
                                     break;
                                 }
+                            },
+                            Some(_) => {
+                                respond_to_client(req.clone(), &stream, session.clone());
                             }
-                            match req.command {
-                                Some(RtspCommand::Setup) => {
-                                    session = Some(RtspSession::record_client_ports(req.clone()));
-                                }
-                                Some(RtspCommand::Play) => match session.clone() {
-                                    Some(_sess) => {
-                                        let serve = |sess: RtspSession, client_ip: String| {
-                                            video_server::serve_rtp(
-                                                client_ip.clone(),
-                                                sess.clone().client_rtp,
-                                                sess.clone().client_rtcp,
-                                                sess.clone().server_rtcp,
-                                            )
-                                        };
-                                        let c_ip = client_ip.clone();
-                                        thread::spawn(move || serve(_sess, c_ip));
-                                        println!("Playing!");
-                                    }
-                                    None => {
-                                        println!("No Session Found!");
-                                        break;
-                                    }
-                                },
-                                Some(_) => (),
-                                None => {
-                                    println!("Could not determine the Rtsp Command!");
-                                    break;
-                                }
+                            None => {
+                                println!("Could not determine the Rtsp Command!");
+                                break;
                             }
-                        }
+                        },
                         None => {
                             println!("Could not parse RtspMessage!");
                             break;

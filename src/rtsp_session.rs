@@ -9,7 +9,7 @@ pub struct RtspSession {
 }
 
 pub trait ClientPorts {
-    fn record_client_ports(msg: RtspMessage) -> RtspSession;
+    fn setup(msg: RtspMessage) -> RtspSession;
 }
 
 fn port_is_available(port: u16) -> bool {
@@ -20,7 +20,7 @@ fn port_is_available(port: u16) -> bool {
 }
 
 impl ClientPorts for RtspSession {
-    fn record_client_ports(msg: RtspMessage) -> RtspSession {
+    fn setup(msg: RtspMessage) -> RtspSession {
         let server_rtcp_port = (12000..50000).find(|port| port_is_available(*port));
         return RtspSession {
             client_rtp: msg.client_rtp.unwrap_or_default(),
