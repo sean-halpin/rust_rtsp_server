@@ -12,3 +12,4 @@ uuid = { version = "0.8.1", features = ["serde", "v4"] }
 gstreamer = "0.15.0"
 failure = "0.1.6"
 futures = "0.3.1"
+clap = "2.31"

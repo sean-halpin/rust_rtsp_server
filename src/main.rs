@@ -1,3 +1,5 @@
+extern crate clap;
+
 mod rtsp_msg_handler;
 mod rtsp_session;
 mod video_server;
@@ -7,6 +9,7 @@ use std::io::{BufRead, BufReader, BufWriter, Write};
 use std::net::{TcpListener, TcpStream};
 use std::str;
 use std::thread;
+use clap::{Arg, App};
 
 fn respond_to_client(req: RtspMessage, stream: &TcpStream, session: Option<RtspSession>) {
     match req.response(session) {
@@ -93,8 +96,23 @@ fn handle_client(stream: TcpStream) {
 }
 
 fn main() {
-    let listener = TcpListener::bind("0.0.0.0:554").unwrap();
-    println!("Server listening on port 554");
+    let matches = App::new("Rust RTSP server")
+        .version("0.1.0")
+        .author("sean.halpin")
+        .about("Rust RTSP server implementation")
+        .arg(Arg::with_name("port")
+            .short("p")
+            .long("port")
+            .value_name("PORT")
+            .help("Port on which to listen")
+            .takes_value(true))
+        .get_matches();
+
+    let port = matches.value_of("port").unwrap_or("554");
+
+    let bind_str = format!("0.0.0.0:{}", port);
+    let listener = TcpListener::bind(&bind_str).unwrap();
+    println!("Server listening on port {}", &bind_str);
     for stream in listener.incoming() {
         match stream {
             Ok(stream) => {
